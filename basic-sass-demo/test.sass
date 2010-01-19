@@ -1,0 +1,54 @@
+// variables
+!main_color = "#555E63"
+!inverse_color = "#FFF"
+
+// mix-ins
+=float-left
+    float: left
+    background-color: green
+    margin:
+        right: 1px 
+    
+=float-right
+    float: right
+    background-color: red
+    margin:
+        left: 1px
+    
+=floated_div
+    color = !inverse_color
+    width: 240px
+
+
+body
+    font-family: arial
+    width: 500px
+    color = !main_color
+
+h1
+    font-weight: bold
+
+a
+    color: orange
+    &:hover
+        color: blue
+        
+p
+    width: 500px
+    border: 1px solid gray
+
+    padding:
+        left: 20px
+        right: 20px
+    
+    a.sectioned-off
+        display: block
+        padding: 10px 0
+        
+#left-col
+    +float-left
+    +floated_div
+
+#right-col
+    +floated_div
+    +float-right
