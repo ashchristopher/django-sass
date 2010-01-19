@@ -1,11 +1,13 @@
 // _layout.sass
 
-=left-side
-    float: left
+=define-float(!fl = left)
+    float = !fl
     margin:
-        right: 1px
+        #{!fl}: 1px
+
+=left-side
+    +define-float(left)
+    
 
 =right-side
-    float: right
-    margin:
-        left: 1px
+    +define-float(right)
