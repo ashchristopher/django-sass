@@ -1,19 +1,18 @@
+// imports
+@import layout
+
 // variables
 !main_color = "#555E63"
 !inverse_color = "#FFF"
 
 // mix-ins
 =float-left
-    float: left
+    +left-side
     background-color: green
-    margin:
-        right: 1px 
     
 =float-right
-    float: right
+    +right-side
     background-color: red
-    margin:
-        left: 1px
     
 =floated_div
     color = !inverse_color
