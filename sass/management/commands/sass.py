@@ -52,7 +52,21 @@ class Command(NoArgsCommand):
                 sys.stderr.write(self.style.ERROR(e.message))
             
     def process_sass(self, name, sass_input, css_output):
-        print 'Converting %s to %s' %(sass_input, css_output)
+        """
+            The user may whish to keep their sass files in their MEDIA_ROOT directory,
+            or they may wish them to be somewhere outsite - even outside their project
+            directory. We try to support both.
+            
+            The same is true for the CSS output file. We recommend putting it in the 
+            MEDIA_ROOT but if there is a reason not to, we support that as well.
+        """
+        # if the user gives an absolute path, don't use the MEDIA_ROOT.
+        sass_input_root = sass_input if os.path.isabs(sass_input) else settings.MEDIA_ROOT + os.path.sep + sass_input
+        sass_output_root = css_output if os.path.isabs(css_output) else settings.MEDIA_ROOT + os.path.sep + css_output
+
+        # check that the sass input file actually exists.
+        if not os.path.exists(sass_input_root):
+            raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %sass_input_root)
     
     def get_sass_file_path(self, relative_path):
         site_media = settings.MEDIA_ROOT
