@@ -21,13 +21,13 @@ class Command(NoArgsCommand):
         #     sys.stderr.write("%s\n" %(output))
         
         try:
-            bin = settings.SASS_BIN
+            self.bin = settings.SASS_BIN
         except:
             sys.stderr.write(self.style.ERROR('SASS_BIN is not defined in settings.py file.\n'))
             return
             
         # test that binary defined exists
-        if not os.path.exists(bin):
+        if not os.path.exists(self.bin):
             sys.stderr.write(self.style.ERROR('Sass binary defined by SASS_BIN does not exist: %s\n' %bin))
             return
             
@@ -50,6 +50,7 @@ class Command(NoArgsCommand):
                 self.process_sass(sass_name, sass_input, sass_output)
             except SassConfigException, e:
                 sys.stderr.write(self.style.ERROR(e.message))
+                return
             
     def process_sass(self, name, sass_input, css_output):
         """
@@ -67,7 +68,22 @@ class Command(NoArgsCommand):
         # check that the sass input file actually exists.
         if not os.path.exists(sass_input_root):
             raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %sass_input_root)
-    
+        
+        # make sure the output directory exists.
+        output_path = sass_output_root.rsplit('/', 1)[0]
+        if not os.path.exists(output_path):
+            # try to create path
+            try:
+                os.mkdirs(output_path, 0644)
+            except os.error, e:
+                raise SassConfigException(e.message)
+            except AttributeError, e:
+                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
+                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+                
+        
+        
+        
     def get_sass_file_path(self, relative_path):
         site_media = settings.MEDIA_ROOT
         
