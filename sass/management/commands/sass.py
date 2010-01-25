@@ -16,7 +16,7 @@ class Command(BaseCommand):
     style = no_style()
     
     option_list = BaseCommand.option_list + ( 
-        make_option('--style', '-t', dest='sass_style', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
+        make_option('--style', '-t', dest='sass_style', default='nested', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
     )
     help = 'Converts Sass files into CSS.'
     
@@ -27,6 +27,7 @@ class Command(BaseCommand):
         # if not status == 0:
         #     import sys
         #     sys.stderr.write("%s\n" %(output))
+        print kwargs
         try:
             self.bin = settings.SASS_BIN
         except:
@@ -34,8 +35,8 @@ class Command(BaseCommand):
             return
         
         # check the sass style if given - nested is default.
-        self.sass_style = kwargs.get('sass_style', None)
-        if self.sass_style and self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
+        self.sass_style = kwargs.get('sass_style')
+        if self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
             sys.stderr.write(self.style.ERROR("Invalid sass style argument: %s\n") %self.sass_style)
             return
         
