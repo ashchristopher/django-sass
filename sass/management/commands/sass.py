@@ -1,5 +1,7 @@
 import sys,os
-from django.core.management.base import NoArgsCommand
+from optparse import make_option
+
+from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.management.color  import no_style
 
@@ -8,24 +10,36 @@ from commands import getstatusoutput
 class SassConfigException(Exception):
     pass
 
-class Command(NoArgsCommand):
+class Command(BaseCommand):
     requires_model_validation = False
     can_import_settings = True
     style = no_style()
     
-    def handle_noargs(self, **kwargs):
+    option_list = BaseCommand.option_list + ( 
+        make_option('--style', '-t', dest='sass_style', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
+    )
+    help = 'Converts Sass files into CSS.'
+    
+    
+    def handle(self, **kwargs):
         # cmd = 'find %s -name "*.pyc" -exec rm {} \;' %(settings.PROJECT_PATH)
         # (status, output) = getstatusoutput(cmd)
         # if not status == 0:
         #     import sys
         #     sys.stderr.write("%s\n" %(output))
-        
         try:
             self.bin = settings.SASS_BIN
         except:
             sys.stderr.write(self.style.ERROR('SASS_BIN is not defined in settings.py file.\n'))
             return
-            
+        
+        # check the sass style if given - nested is default.
+        self.sass_style = kwargs.get('sass_style', None)
+        if self.sass_style and self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
+            sys.stderr.write(self.style.ERROR("Invalid sass style argument: %s\n") %self.sass_style)
+            return
+        
+        
         # test that binary defined exists
         if not os.path.exists(self.bin):
             sys.stderr.write(self.style.ERROR('Sass binary defined by SASS_BIN does not exist: %s\n' %bin))
@@ -80,7 +94,7 @@ class Command(NoArgsCommand):
             except AttributeError, e:
                 # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
                 raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
-                
+        print 'Processing %s' %name
         
         
         
