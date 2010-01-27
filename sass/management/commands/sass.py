@@ -17,6 +17,7 @@ class Command(BaseCommand):
     
     option_list = BaseCommand.option_list + ( 
         make_option('--style', '-t', dest='sass_style', default='nested', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
+        make_option('--list', '-l', action='store_true', dest='list_sass' , default=None, help='Display information about the status of your sass files.'),
     )
     help = 'Converts Sass files into CSS.'
     
@@ -27,15 +28,26 @@ class Command(BaseCommand):
         # if not status == 0:
         #     import sys
         #     sys.stderr.write("%s\n" %(output))
-        print kwargs
         try:
             self.bin = settings.SASS_BIN
         except:
             sys.stderr.write(self.style.ERROR('SASS_BIN is not defined in settings.py file.\n'))
             return
         
-        # check the sass style if given - nested is default.
         self.sass_style = kwargs.get('sass_style')
+        
+        if kwargs.get('list_sass'):
+            self.process_sass_list()
+        else:
+            self.process_sass_files()
+    
+    
+    def process_sass_list(self):
+        print 'Processing lis'
+        
+        
+    def process_sass_files(self):
+        # check the sass style if given - nested is default.
         if self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
             sys.stderr.write(self.style.ERROR("Invalid sass style argument: %s\n") %self.sass_style)
             return
@@ -67,6 +79,7 @@ class Command(BaseCommand):
                 sys.stderr.write(self.style.ERROR(e.message))
                 return
             
+            
     def process_sass(self, name, sass_input, css_output):
         """
             The user may whish to keep their sass files in their MEDIA_ROOT directory,
@@ -96,7 +109,6 @@ class Command(BaseCommand):
                 # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
                 raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
         print 'Processing %s' %name
-        
         
         
     def get_sass_file_path(self, relative_path):
