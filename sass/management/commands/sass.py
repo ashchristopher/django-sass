@@ -1,4 +1,6 @@
-import sys,os
+import sys
+import os
+import hashlib
 from optparse import make_option
 
 from django.core.management.base import BaseCommand
@@ -11,6 +13,15 @@ class SassConfigException(Exception):
     pass
 
 class Command(BaseCommand):
+    """
+        The user may whish to keep their sass files in their MEDIA_ROOT directory,
+        or they may wish them to be somewhere outsite - even outside their project
+        directory. We try to support both.
+        
+        The same is true for the CSS output file. We recommend putting it in the 
+        MEDIA_ROOT but if there is a reason not to, we support that as well.
+    """
+    
     requires_model_validation = False
     can_import_settings = True
     style = no_style()
@@ -23,11 +34,6 @@ class Command(BaseCommand):
     
     
     def handle(self, **kwargs):
-        # cmd = 'find %s -name "*.pyc" -exec rm {} \;' %(settings.PROJECT_PATH)
-        # (status, output) = getstatusoutput(cmd)
-        # if not status == 0:
-        #     import sys
-        #     sys.stderr.write("%s\n" %(output))
         try:
             self.bin = settings.SASS_BIN
             # test that binary defined exists
@@ -47,17 +53,29 @@ class Command(BaseCommand):
         if kwargs.get('list_sass'):
             self.process_sass_list()
         else:
-            # self.process_sass_files()
-            pass
-    
+            self.process_sass_dir()
+            
     
     def process_sass_list(self):
-        print self.build_sass_structure()
-
-            
-            
+        """
+        We check to see if the Sass outlined in the SASS setting are different from what the databse
+        has stored. We only care about listing those files that are in the SASS setting. Ignore the 
+        settings in the DB if the files have been removed.
         
+        Output in the format only if there are differences.:
         
+            <name> <old_hash> <current_hash>
+            
+            If there are no changes, output at the end of the script that there were no changes.
+        
+        """
+        
+        # process the Sass information in the settings.
+        sass_struct = self.build_sass_structure()
+        for sass in sass_struct:
+            pass
+                
+            
     def build_sass_structure(self):
         try:
             sass_definitions = settings.SASS
@@ -87,38 +105,64 @@ class Command(BaseCommand):
                 'output' : sass_output_root,
             })
         return sass_struct    
+    
+    
+    def process_sass_dir(self):
+        sass_struct = self.build_sass_structure()
+        for sass_info in sass_struct:
+            try:
+                self.process_sass_file(
+                    sass_info.get('name'),
+                    sass_info.get('input'),
+                    sass_info.get('output')
+                )
+            except SassConfigException, e:
+                sys.stderr.write(self.style.ERROR(e.message))
             
             
-    # def process_sass_dir(self, name, sass_input, css_output):
-    #     """
-    #         The user may whish to keep their sass files in their MEDIA_ROOT directory,
-    #         or they may wish them to be somewhere outsite - even outside their project
-    #         directory. We try to support both.
-    #         
-    #         The same is true for the CSS output file. We recommend putting it in the 
-    #         MEDIA_ROOT but if there is a reason not to, we support that as well.
-    #     """
-    #     # if the user gives an absolute path, don't use the MEDIA_ROOT.
-    #     sass_input_root = sass_input if os.path.isabs(sass_input) else settings.MEDIA_ROOT + os.path.sep + sass_input
-    #     sass_output_root = css_output if os.path.isabs(css_output) else settings.MEDIA_ROOT + os.path.sep + css_output
-    # 
-    #     # check that the sass input file actually exists.
-    #     if not os.path.exists(sass_input_root):
-    #         raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %sass_input_root)
-    #     
-    #     # make sure the output directory exists.
-    #     output_path = sass_output_root.rsplit('/', 1)[0]
-    #     if not os.path.exists(output_path):
-    #         # try to create path
-    #         try:
-    #             os.mkdirs(output_path, 0644)
-    #         except os.error, e:
-    #             raise SassConfigException(e.message)
-    #         except AttributeError, e:
-    #             # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
-    #             raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
-    #     print 'Processing %s' %name
+    def process_sass_file(self, name, input_file, output_file):
+        # check that the sass input file actually exists.
+        if not os.path.exists(input_file):
+            raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
+        # make sure the output directory exists.
+        output_path = output_file.rsplit('/', 1)[0]
+        if not os.path.exists(output_path):
+            # try to create path
+            try:
+                os.mkdirs(output_path, 0644)
+            except os.error, e:
+                raise SassConfigException(e.message)
+            except AttributeError, e:
+                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
+                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+        # everything should be in check - process files
+        sass_dict = {
+            'bin' : self.bin,
+            'sass_style' : self.sass_style,
+            'input' : input_file,
+            'output' : output_file,
+        }
+        cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
+        (status, output) = getstatusoutput(cmd)
+        if not status == 0:
+           raise SassConfException(output)
+        # if we successfully generate the file, save the model to the DB.
+        output_hash = self.md5_file(output_file)
+        print output_hash
         
+        
+    def md5_file(self, filename):
+        try:
+            md5 = hashlib.md5()
+            fd = open(filename,"rb")
+            content = fd.readlines()
+            fd.close()
+            for line in content:
+                md5.update(line)
+            return md5.hexdigest()
+        except IOError, e:
+            raise SassConfigException(e.message)
+    
         
     def get_file_path(self, path):
         if os.path.isabs(path):
