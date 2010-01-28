@@ -2,12 +2,14 @@ import sys
 import os
 import hashlib
 from optparse import make_option
+from commands import getstatusoutput
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.management.color  import no_style
 
-from commands import getstatusoutput
+from sass.models import SassModel
+
 
 class SassConfigException(Exception):
     pass
@@ -142,13 +144,28 @@ class Command(BaseCommand):
             'input' : input_file,
             'output' : output_file,
         }
-        cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
-        (status, output) = getstatusoutput(cmd)
-        if not status == 0:
-           raise SassConfException(output)
-        # if we successfully generate the file, save the model to the DB.
-        output_hash = self.md5_file(output_file)
-        print output_hash
+        
+        try:
+            sass_obj = SassModel.objects.get(name=name)
+        except SassModel.DoesNotExist, e:
+            # create the new sass_obj
+            sass_obj = Sass(e)
+        
+        input_digest = self.md5_file(input_file)
+        if not input_digest == sass_obj.digest:
+            print "Adding the sass: %s" %name
+            cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
+            (status, output) = getstatusoutput(cmd)
+            if not status == 0:
+                raise SassConfException(output)
+            # if we successfully generate the file, save the model to the DB.    
+            sass_obj.name = name
+            sass_obj.sass_path = input_file
+            sass_obj.css_path = output_file
+            sass_obj.digest = input_digest
+            sass_obj.save()
+        else:
+            print "Skipping %s" %input_file
         
         
     def md5_file(self, filename):
