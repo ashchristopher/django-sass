@@ -1,6 +1,4 @@
-import sys
-import os
-import hashlib
+import sys, os, hashlib
 from optparse import make_option
 from commands import getstatusoutput
 
@@ -9,7 +7,6 @@ from django.conf import settings
 from django.core.management.color  import no_style
 
 from sass.models import SassModel
-
 
 class SassConfigException(Exception):
     pass
@@ -149,10 +146,10 @@ class Command(BaseCommand):
             sass_obj = SassModel.objects.get(name=name)
         except SassModel.DoesNotExist, e:
             # create the new sass_obj
-            sass_obj = Sass(e)
+            sass_obj = SassModel()
         
         input_digest = self.md5_file(input_file)
-        if not input_digest == sass_obj.digest:
+        if not input_digest == sass_obj.digest or not os.path.exists(output_file):
             print "Adding the sass: %s" %name
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
             (status, output) = getstatusoutput(cmd)
@@ -165,7 +162,7 @@ class Command(BaseCommand):
             sass_obj.digest = input_digest
             sass_obj.save()
         else:
-            print "Skipping %s" %input_file
+            print "Skipping %s" %name
         
         
     def md5_file(self, filename):
