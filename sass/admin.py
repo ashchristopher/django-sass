@@ -2,4 +2,7 @@ from django.contrib import admin
 
 from sass.models import SassModel
 
-admin.site.register(SassModel)
+class SassModelAdmin(admin.ModelAdmin):
+    pass
+
+admin.site.register(SassModel, SassModelAdmin)
