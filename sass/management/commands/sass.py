@@ -32,7 +32,7 @@ class Command(BaseCommand):
     help = 'Converts Sass files into CSS.'
     
     
-    def handle(self, **kwargs):
+    def handle(self, *args, **kwargs):
         try:
             self.bin = settings.SASS_BIN
             # test that binary defined exists
