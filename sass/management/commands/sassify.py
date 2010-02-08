@@ -28,6 +28,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + ( 
         make_option('--style', '-t', dest='sass_style', default='nested', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
         make_option('--list', '-l', action='store_true', dest='list_sass' , default=None, help='Display information about the status of your sass files.'),
+        make_option('--force', '-f', action='store_true', dest='force_sass', default=False, help='Force sass to run.'),
     )
     help = 'Converts Sass files into CSS.'
     
@@ -52,7 +53,7 @@ class Command(BaseCommand):
         if kwargs.get('list_sass'):
             self.process_sass_list()
         else:
-            self.process_sass_dir()
+            self.process_sass_dir(force=kwargs.get('force_sass'))
             
     
     def process_sass_list(self):
@@ -106,20 +107,24 @@ class Command(BaseCommand):
         return sass_struct    
     
     
-    def process_sass_dir(self):
+    def process_sass_dir(self, force=False):
+        if force:
+            print "Forcing sass to run on all files."
+        
         sass_struct = self.build_sass_structure()
         for sass_info in sass_struct:
             try:
                 self.process_sass_file(
                     sass_info.get('name'),
                     sass_info.get('input'),
-                    sass_info.get('output')
+                    sass_info.get('output'),
+                    force
                 )
             except SassConfigException, e:
                 sys.stderr.write(self.style.ERROR(e.message))
             
             
-    def process_sass_file(self, name, input_file, output_file):
+    def process_sass_file(self, name, input_file, output_file, force):
         # check that the sass input file actually exists.
         if not os.path.exists(input_file):
             raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
@@ -149,7 +154,7 @@ class Command(BaseCommand):
             sass_obj = SassModel()
         
         input_digest = self.md5_file(input_file)
-        if not input_digest == sass_obj.digest or not os.path.exists(output_file):
+        if not input_digest == sass_obj.digest or not os.path.exists(output_file) or force:
             print "Adding the sass: %s" %name
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
             (status, output) = getstatusoutput(cmd)
