@@ -73,8 +73,30 @@ class Command(BaseCommand):
         # process the Sass information in the settings.
         sass_struct = self.build_sass_structure()
         for sass in sass_struct:
-            pass
+            # get the digest we have stored and compare to the hash we have on disk.
+            try:
+                # hash from db.
+                sass_obj = SassModel.objects.get(name=sass['name'])
+                sass_digest = sass_obj.digest
+            except (SassModel.DoesNotExist):
+                sass_digest = None
                 
+            try:
+                # digest from disk.
+                sass_file_digest = self.md5_file(sass['input'])
+            except SassConfigException, e:
+                # not really sure what we want to do with this exception.
+                raise e
+            
+            same_digest = sass_file_digest == sass_digest
+            
+            print "%s: %s" %(sass['name'], "NO CHANGE" if same_digest else "UPDATE REQUIRED")
+            if not same_digest:
+                # give out information about the changes.
+                print "-------------------------------------"
+                print sass['input']
+                print "Previous: %s" %sass_digest
+                print "Current:  %s\n" %sass_file_digest
             
     def build_sass_structure(self):
         try:
