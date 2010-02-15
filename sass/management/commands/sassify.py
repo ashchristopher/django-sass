@@ -184,32 +184,22 @@ class Command(BaseCommand):
             
             
     def process_sass_file(self, name, input_file, output_file, force):
+        print "[%s]" %name
         # check that the sass input file actually exists.
         if not os.path.exists(input_file):
             raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
         # make sure the output directory exists.
         output_path = output_file.rsplit('/', 1)[0]
         self._prepare_dir(output_path)
-        # everything should be in check - process files
-        sass_dict = {
-            'bin' : self.bin,
-            'sass_style' : self.sass_style,
-            'input' : input_file,
-            'output' : output_file,
-        }
         
-        try:
-            sass_obj = SassModel.objects.get(name=name)
-        except SassModel.DoesNotExist, e:
-            # create the new sass_obj
-            sass_obj = SassModel()
-        
+        sass_obj, was_created = SassModel.objects.get_or_create(name=name)
         input_digest = self.md5_file(input_file)
+        
         if not input_digest == sass_obj.digest or not os.path.exists(output_file) or force:
-            print "Adding the sass: %s" %name
+            sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
             (status, output) = getstatusoutput(cmd)
-            if not status == 0:
+            if status:
                 raise SassConfException(output)
             # if we successfully generate the file, save the model to the DB.    
             sass_obj.name = name
@@ -217,8 +207,9 @@ class Command(BaseCommand):
             sass_obj.css_path = output_file
             sass_obj.digest = input_digest
             sass_obj.save()
+            print "\tGenerated new CSS file: %s" %sass_obj.css_path
         else:
-            print "Skipping %s" %name
+            print "\tAlready up to date. %s" %sass_obj.name
         
         
     def md5_file(self, filename):
