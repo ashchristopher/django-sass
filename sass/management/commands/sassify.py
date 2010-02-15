@@ -52,20 +52,44 @@ class Command(BaseCommand):
             return
         
         if kwargs.get('list_sass'):
-            self.process_sass_list()
+            self.list()
         elif kwargs.get('clean'):
             self.clean()
         else:
-            self.process_sass_dir(force=kwargs.get('force_sass'))
-            
+            self.process_sass(force=kwargs.get('force_sass'))
     
-    def clean(self):
-        sass_struct = self.build_sass_structure()
-        for sd in sass_struct:
-            print "[%s]" % sd['name']
-            msg = self._remove_file(path_to_file=sd['output'])
-            print "\t%s" % msg
     
+    def _build_sass_structure(self):
+        try:
+            sass_definitions = settings.SASS
+        except:
+            sass_definitions = ()
+
+        sass_struct = []
+        for sass_def in sass_definitions:
+            try:
+                sass_name = sass_def.get('name', None)
+                sass_details = sass_def.get('details', {})
+                sass_input = sass_details.get('input', None)
+                sass_output = sass_details.get('output', None)
+
+                # i hate generic exception message - try to give the user a meaningful message about what exactly the problem is.
+                for prop in [('name', sass_name), ('details', sass_details), ('input', sass_input), ('output', sass_output)]:
+                    if not prop[1]:
+                        raise SassConfigException('Sass \'%s\' property not defined in configuration:\n%s\n' %(prop[0], sass_def))                
+            except SassConfigException, e:
+                sys.stderr.write(self.style.ERROR(e.message))
+                return
+            sass_input_root = self._get_file_path(sass_input)
+            sass_output_root = self._get_file_path(sass_output)
+            sass_struct.append({
+                'name' : sass_name,
+                'input' : sass_input_root,
+                'output' : sass_output_root,
+            })
+        return sass_struct
+    
+         
     def _remove_file(self, path_to_file):
         try:
             os.remove(path_to_file)
@@ -74,7 +98,35 @@ class Command(BaseCommand):
             # there is no recovery for these errors - just display to the user.
             return e.strerror
     
-    def process_sass_list(self):
+    
+    def _get_file_path(self, path):
+        if os.path.isabs(path):
+            return path
+        site_media = settings.MEDIA_ROOT
+        return site_media + os.path.sep + path
+        
+        
+    def _prepare_dir(self, output_path):
+        if not os.path.exists(output_path):
+            # try to create path
+            try:
+                os.mkdirs(output_path, 0644)
+            except os.error, e:
+                raise SassConfigException(e.message)
+            except AttributeError, e:
+                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
+                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+    
+    
+    def clean(self):
+        sass_struct = self._build_sass_structure()
+        for sd in sass_struct:
+            print "[%s]" % sd['name']
+            msg = self._remove_file(path_to_file=sd['output'])
+            print "\t%s" % msg
+    
+    
+    def list(self):
         """
         We check to see if the Sass outlined in the SASS setting are different from what the databse
         has stored. We only care about listing those files that are in the SASS setting. Ignore the 
@@ -85,11 +137,9 @@ class Command(BaseCommand):
             <name> <old_hash> <current_hash>
             
             If there are no changes, output at the end of the script that there were no changes.
-        
         """
-        
         # process the Sass information in the settings.
-        sass_struct = self.build_sass_structure()
+        sass_struct = self._build_sass_structure()
         for sass in sass_struct:
             # get the digest we have stored and compare to the hash we have on disk.
             try:
@@ -115,43 +165,12 @@ class Command(BaseCommand):
                 print sass['input']
                 print "Previous: %s" %sass_digest
                 print "Current:  %s\n" %sass_file_digest
-            
-    def build_sass_structure(self):
-        try:
-            sass_definitions = settings.SASS
-        except:
-            sass_definitions = ()
-            
-        sass_struct = []
-        for sass_def in sass_definitions:
-            try:
-                sass_name = sass_def.get('name', None)
-                sass_details = sass_def.get('details', {})
-                sass_input = sass_details.get('input', None)
-                sass_output = sass_details.get('output', None)
-                
-                # i hate generic exception message - try to give the user a meaningful message about what exactly the problem is.
-                for prop in [('name', sass_name), ('details', sass_details), ('input', sass_input), ('output', sass_output)]:
-                    if not prop[1]:
-                        raise SassConfigException('Sass \'%s\' property not defined in configuration:\n%s\n' %(prop[0], sass_def))                
-            except SassConfigException, e:
-                sys.stderr.write(self.style.ERROR(e.message))
-                return
-            sass_input_root = self.get_file_path(sass_input)
-            sass_output_root = self.get_file_path(sass_output)
-            sass_struct.append({
-                'name' : sass_name,
-                'input' : sass_input_root,
-                'output' : sass_output_root,
-            })
-        return sass_struct    
-    
-    
-    def process_sass_dir(self, force=False):
+
+
+    def process_sass(self, force=False):
         if force:
-            print "Forcing sass to run on all files."
-        
-        sass_struct = self.build_sass_structure()
+            print "\nForcing sass to run on all files.\n"
+        sass_struct = self._build_sass_structure()
         for sass_info in sass_struct:
             try:
                 self.process_sass_file(
@@ -170,15 +189,7 @@ class Command(BaseCommand):
             raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
         # make sure the output directory exists.
         output_path = output_file.rsplit('/', 1)[0]
-        if not os.path.exists(output_path):
-            # try to create path
-            try:
-                os.mkdirs(output_path, 0644)
-            except os.error, e:
-                raise SassConfigException(e.message)
-            except AttributeError, e:
-                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
-                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+        self._prepare_dir(output_path)
         # everything should be in check - process files
         sass_dict = {
             'bin' : self.bin,
@@ -221,11 +232,4 @@ class Command(BaseCommand):
             return md5.hexdigest()
         except IOError, e:
             raise SassConfigException(e.message)
-    
-        
-    def get_file_path(self, path):
-        if os.path.isabs(path):
-            return path
-        site_media = settings.MEDIA_ROOT
-        return site_media + os.path.sep + path
         
