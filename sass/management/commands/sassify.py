@@ -29,6 +29,7 @@ class Command(BaseCommand):
         make_option('--style', '-t', dest='sass_style', default='nested', help='Sass output style. Can be nested (default), compact, compressed, or expanded.'),
         make_option('--list', '-l', action='store_true', dest='list_sass' , default=None, help='Display information about the status of your sass files.'),
         make_option('--force', '-f', action='store_true', dest='force_sass', default=False, help='Force sass to run.'),
+        make_option('--clean', '-c', action='store_true', dest='clean', default=False, help='Remove all the generated CSS files.'),
     )
     help = 'Converts Sass files into CSS.'
     
@@ -52,9 +53,26 @@ class Command(BaseCommand):
         
         if kwargs.get('list_sass'):
             self.process_sass_list()
+        elif kwargs.get('clean'):
+            self.clean()
         else:
             self.process_sass_dir(force=kwargs.get('force_sass'))
             
+    
+    def clean(self):
+        sass_struct = self.build_sass_structure()
+        for sd in sass_struct:
+            print "[%s]" % sd['name']
+            msg = self._remove_file(path_to_file=sd['output'])
+            print "\t%s" % msg
+    
+    def _remove_file(self, path_to_file):
+        try:
+            os.remove(path_to_file)
+            return "Removed %s" % path_to_file
+        except OSError, e:
+            # there is no recovery for these errors - just display to the user.
+            return e.strerror
     
     def process_sass_list(self):
         """
