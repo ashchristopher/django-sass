@@ -12,23 +12,16 @@ register = template.Library()
 
 class SassNode(template.Node):
     def __init__(self, name):
-        self.name = name
-
-        # check to make sure the name passed into the tag is defined.
-        name_is_valid = False
-        for s in SassUtils.build_sass_structure():
-            if s['name'] == name:
-                name_is_valid = True
-                self.sass_structure = s
-                continue
-        if not name_is_valid:
+        try:
+            self.model = SassModel.objects.get(name=name)
+        except SassModel.DoesNotExist, e:
             raise template.TemplateSyntaxError('Sass name "%s" does not exist.' % self.name)
         
         
     def render(self, context):
-        media_url = self.sass_structure['media_out']
-        sass_obj = SassModel.objects.get(name=self.sass_structure['name'])
-        css = "<link href='%s?%s' rel='stylesheet' type='text/css' />" %(media_url, sass_obj.digest)
+        relative_css_path = self.model.relative_css_path()
+        media_url = self.model.css_media_path()
+        css = "<link href='%s?%s' rel='stylesheet' type='text/css' />" %(media_url, self.model.digest)
         return css
 
 

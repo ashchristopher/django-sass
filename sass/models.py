@@ -1,4 +1,8 @@
 from django.db import models
+from django.conf import settings
+
+from sass.utils import SassUtils
+
 
 class SassModel(models.Model):
     name = models.CharField(max_length=60, primary_key=True, help_text='Name of the Sass conversion.')
@@ -8,3 +12,9 @@ class SassModel(models.Model):
     
     def __unicode__(self):
         return self.name
+        
+    def relative_css_path(self):
+        return self.css_path.split(settings.MEDIA_ROOT)[1].lstrip('/')
+        
+    def css_media_path(self):
+        return SassUtils.get_media_url(path=self.relative_css_path())
