@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.management.color  import no_style
 
 from sass.models import SassModel
+from sass.utils import SassUtils
 
 class SassConfigException(Exception):
     pass
@@ -35,15 +36,14 @@ class Command(BaseCommand):
     
     
     def handle(self, *args, **kwargs):
-        try:
-            self.bin = settings.SASS_BIN
-            # test that binary defined exists
-            if not os.path.exists(self.bin):
-                sys.stderr.write(self.style.ERROR('Sass binary defined by SASS_BIN does not exist: %s\n' %bin))
-                return
-        except:
+        self.bin = getattr(settings, "SASS_BIN", None)
+        if not self.bin:
             sys.stderr.write(self.style.ERROR('SASS_BIN is not defined in settings.py file.\n'))
             return
+        # test that binary defined exists
+        if not os.path.exists(self.bin):
+            sys.stderr.write(self.style.ERROR('Sass binary defined by SASS_BIN does not exist: %s\n' %bin))
+            return    
         
         # make sure the Sass style given is valid.
         self.sass_style = kwargs.get('sass_style')
@@ -57,38 +57,7 @@ class Command(BaseCommand):
             self.clean()
         else:
             self.process_sass(force=kwargs.get('force_sass'))
-    
-    
-    def _build_sass_structure(self):
-        try:
-            sass_definitions = settings.SASS
-        except:
-            sass_definitions = ()
 
-        sass_struct = []
-        for sass_def in sass_definitions:
-            try:
-                sass_name = sass_def.get('name', None)
-                sass_details = sass_def.get('details', {})
-                sass_input = sass_details.get('input', None)
-                sass_output = sass_details.get('output', None)
-
-                # i hate generic exception message - try to give the user a meaningful message about what exactly the problem is.
-                for prop in [('name', sass_name), ('details', sass_details), ('input', sass_input), ('output', sass_output)]:
-                    if not prop[1]:
-                        raise SassConfigException('Sass \'%s\' property not defined in configuration:\n%s\n' %(prop[0], sass_def))                
-            except SassConfigException, e:
-                sys.stderr.write(self.style.ERROR(e.message))
-                return
-            sass_input_root = self._get_file_path(sass_input)
-            sass_output_root = self._get_file_path(sass_output)
-            sass_struct.append({
-                'name' : sass_name,
-                'input' : sass_input_root,
-                'output' : sass_output_root,
-            })
-        return sass_struct
-    
          
     def _remove_file(self, path_to_file):
         try:
@@ -97,14 +66,7 @@ class Command(BaseCommand):
         except OSError, e:
             # there is no recovery for these errors - just display to the user.
             return e.strerror
-    
-    
-    def _get_file_path(self, path):
-        if os.path.isabs(path):
-            return path
-        site_media = settings.MEDIA_ROOT
-        return site_media + os.path.sep + path
-        
+
         
     def _prepare_dir(self, output_path):
         if not os.path.exists(output_path):
@@ -137,9 +99,14 @@ class Command(BaseCommand):
         
         # check that a CSS file exists - if not, report to the user.
         if not os.path.exists(sass_instance['output']):
-            print "\tCSS needs to be generated."
+            print "\tInput: %s" % sass_instance['input']
+            print "\tOutput: %s" % sass_instance['output']
+            print "\n\tCSS needs to be generated.\n"
         elif sass_file_digest == sass_digest:
-            print "\tNo changes."
+            print "\tInput: %s" % sass_instance['input']
+            print "\tOutput: %s" % sass_instance['output']
+            
+            print "\n\tUp to date.\n"
         else:
             # give out information about the changes.
             print "\tUpdate required\n\t---------------"
@@ -149,7 +116,7 @@ class Command(BaseCommand):
 
     
     def clean(self):
-        sass_struct = self._build_sass_structure()
+        sass_struct = SassUtils.build_sass_structure()
         for sd in sass_struct:
             print "[%s]" % sd['name']
             msg = self._remove_file(path_to_file=sd['output'])
@@ -169,7 +136,7 @@ class Command(BaseCommand):
             If there are no changes, output at the end of the script that there were no changes.
         """
         # process the Sass information in the settings.
-        sass_struct = self._build_sass_structure()
+        sass_struct = SassUtils.build_sass_structure()
         for si in sass_struct:
             self._list_sass(sass_instance=si)
 
@@ -177,7 +144,7 @@ class Command(BaseCommand):
     def process_sass(self, force=False):
         if force:
             print "\nForcing sass to run on all files.\n"
-        sass_struct = self._build_sass_structure()
+        sass_struct = SassUtils.build_sass_structure()
         for sass_info in sass_struct:
             try:
                 self.process_sass_file(
