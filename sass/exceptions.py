@@ -1,0 +1,2 @@
+class SassConfigException(Exception):
+    pass

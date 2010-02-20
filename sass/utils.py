@@ -1,7 +1,10 @@
 import os
+import hashlib
 
 from django.conf import settings
 from django.utils.http import urlquote
+
+from sass.exceptions import SassConfigException
 
 
 class SassUtils(object):
@@ -47,3 +50,18 @@ class SassUtils(object):
                 'media_out' : sass_output_media,
             })
         return sass_struct
+       
+    
+    @staticmethod
+    def md5_file(filename):
+        try:
+            md5 = hashlib.md5()
+            fd = open(filename,"rb")
+            content = fd.readlines()
+            fd.close()
+            for line in content:
+                md5.update(line)
+            return md5.hexdigest()
+        except IOError, e:
+            raise SassConfigException(e.message)
+    

@@ -1,4 +1,4 @@
-import sys, os, hashlib
+import sys, os
 from optparse import make_option
 from commands import getstatusoutput
 
@@ -8,9 +8,8 @@ from django.core.management.color  import no_style
 
 from sass.models import SassModel
 from sass.utils import SassUtils
+from sass.exceptions import SassConfigException
 
-class SassConfigException(Exception):
-    pass
 
 class Command(BaseCommand):
     """
@@ -92,7 +91,7 @@ class Command(BaseCommand):
             
         try:
             # digest from disk.
-            sass_file_digest = self.md5_file(sass_instance['input'])
+            sass_file_digest = SassUtils.md5_file(sass_instance['input'])
         except SassConfigException, e:
             # not really sure what we want to do with this exception.
             raise e
@@ -167,7 +166,7 @@ class Command(BaseCommand):
         self._prepare_dir(output_path)
         
         sass_obj, was_created = SassModel.objects.get_or_create(name=name)
-        input_digest = self.md5_file(input_file)
+        input_digest = SassUtils.md5_file(input_file)
         
         if not input_digest == sass_obj.digest or not os.path.exists(output_file) or force:
             sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
@@ -184,17 +183,4 @@ class Command(BaseCommand):
             print "\tGenerated new CSS file: %s" %sass_obj.css_path
         else:
             print "\tAlready up to date."
-        
-        
-    def md5_file(self, filename):
-        try:
-            md5 = hashlib.md5()
-            fd = open(filename,"rb")
-            content = fd.readlines()
-            fd.close()
-            for line in content:
-                md5.update(line)
-            return md5.hexdigest()
-        except IOError, e:
-            raise SassConfigException(e.message)
         
