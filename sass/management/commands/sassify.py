@@ -8,8 +8,8 @@ from django.core.management.color  import no_style
 from django.utils.http import urlquote
 
 from sass.models import SassModel
-from sass.utils import SassUtils
-from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError
+from sass.utils import SassUtils, updated_needed
+from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError, SassGenerationError, SassException
 
 
 class Command(BaseCommand):
@@ -70,8 +70,8 @@ class Command(BaseCommand):
             try:
                 sd = {
                     'name' : sass_def['name'],
-                    'input' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['input']),
-                    'output' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['output']),
+                    'input_file' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['input']),
+                    'output_file' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['output']),
                     'media_output' : settings.MEDIA_URL + urlquote(sass_def['details']['output']),
                 }
                 definitions.append(sd)
@@ -85,11 +85,58 @@ class Command(BaseCommand):
             print "Forcing sass to run on all files."
         sass_definitions = self.get_sass_definitions()
         for sass_def in sass_definitions:
-            print sass_def
+            self.generate_css_file(force=force, **sass_def)
 
 
-    def generate_css_file(self, name, input, output):
-        pass
+    def generate_css_file(self, force, name, input_file, output_file, **kwargs):
+        # check that the sass input file actually exists.
+        if not os.path.exists(input_file):
+            raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
+        output_path = output_file.rsplit('/', 1)[0]
+        if not os.path.exists(output_path):
+            # try to create path
+            try:
+                os.mkdirs(output_path, 0644)
+            except os.error, e:
+                raise SassConfigException(e.message)
+            except AttributeError, e:
+                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
+                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+                
+        try:
+            sass_obj = SassModel.objects.get(name=name)
+            was_created = False
+        except SassModel.DoesNotExist:
+            sass_obj = SassModel(name=name)
+            was_created = True
+            
+        sass_obj.sass_path = input_file 
+        sass_obj.css_path = output_file
+        
+        needs_update = was_created or force or updated_needed(sass_obj)
+        if needs_update:
+            sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
+            cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
+            (status, output) = getstatusoutput(cmd)
+            if not status == 0:
+                raise SassException(output)
+            sass_obj.save()
+    
+    def clean(self):
+        for s in SassModel.objects.all():
+            try:
+                print "Removing css: %s" % s.css_path
+                os.remove(s.css_path)
+                s.delete()
+            except OSError, e:
+                import pdb; pdb.stack_trace()
+                # no recovery for this - send it back to the user.
+                raise e
+        # sass_struct = SassUtils.build_sass_structure()
+        # for sd in sass_struct:
+        #     print "[%s]" % sd['name']
+        #     msg = self._remove_file(path_to_file=sd['output'])
+        #     print "\t%s" % msg
 
 
     def _remove_file(self, path_to_file):
@@ -146,14 +193,6 @@ class Command(BaseCommand):
             print "\t%s" % sass_instance['input']
             print "\tPrevious: %s" % sass_digest
             print "\tCurrent:  %s" % sass_file_digest
-
-    
-    def clean(self):
-        sass_struct = SassUtils.build_sass_structure()
-        for sd in sass_struct:
-            print "[%s]" % sd['name']
-            msg = self._remove_file(path_to_file=sd['output'])
-            print "\t%s" % msg
     
     
     def list(self):

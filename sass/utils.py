@@ -4,7 +4,18 @@ import hashlib
 from django.conf import settings
 from django.utils.http import urlquote
 
+from sass.models import SassModel
 from sass.exceptions import SassConfigException
+
+def updated_needed(new_sass_model):
+    # check the database and see if the 
+    name = new_sass_model.name
+    orig_sass_model = SassModel.objects.get(name=name)
+    
+    # if the model has been modified, then we need to update.
+    if not orig_sass_model.__dict__ == new_sass_model.__dict__:
+        return True
+    return False
 
 
 class SassUtils(object):
