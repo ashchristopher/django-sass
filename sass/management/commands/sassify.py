@@ -8,7 +8,7 @@ from django.core.management.color  import no_style
 
 from sass.models import SassModel
 from sass.utils import SassUtils
-from sass.exceptions import SassConfigException
+from sass.exceptions import SassConfigException, SassConfigurationError
 
 
 class Command(BaseCommand):
@@ -33,17 +33,17 @@ class Command(BaseCommand):
     )
     help = 'Converts Sass files into CSS.'
     
-    
-    def handle(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super(Command, self).__init__(*args, **kwargs)
         self.bin = getattr(settings, "SASS_BIN", None)
         if not self.bin:
-            sys.stderr.write(self.style.ERROR('SASS_BIN is not defined in settings.py file.\n'))
-            return
-        # test that binary defined exists
+            raise SassConfigurationError('SASS_BIN is not defined in settings.py file.')
+        # test that the binary actually exists.
         if not os.path.exists(self.bin):
-            sys.stderr.write(self.style.ERROR('Sass binary defined by SASS_BIN does not exist: %s\n' %bin))
-            return    
+            raise SassConfigurationError('Sass binary defined by SASS_BIN does not exist: %s' % self.bin)
         
+    
+    def handle(self, *args, **kwargs):
         # make sure the Sass style given is valid.
         self.sass_style = kwargs.get('sass_style')
         if self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
