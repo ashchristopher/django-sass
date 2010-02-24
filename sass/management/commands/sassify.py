@@ -5,10 +5,11 @@ from commands import getstatusoutput
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.management.color  import no_style
+from django.utils.http import urlquote
 
 from sass.models import SassModel
 from sass.utils import SassUtils
-from sass.exceptions import SassConfigException, SassConfigurationError
+from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError
 
 
 class Command(BaseCommand):
@@ -41,23 +42,56 @@ class Command(BaseCommand):
         # test that the binary actually exists.
         if not os.path.exists(self.bin):
             raise SassConfigurationError('Sass binary defined by SASS_BIN does not exist: %s' % self.bin)
-        
+    
     
     def handle(self, *args, **kwargs):
         # make sure the Sass style given is valid.
         self.sass_style = kwargs.get('sass_style')
         if self.sass_style not in ('nested', 'compact', 'compressed', 'expanded'):
-            sys.stderr.write(self.style.ERROR("Invalid sass style argument: %s\n") %self.sass_style)
-            return
+            raise SassCommandArgumentError("Invalid sass style argument: %s" % self.sass_style)
         
-        if kwargs.get('list_sass'):
+        force = kwargs.get('force_sass')
+        list_sass = kwargs.get('list_sass')
+        clean = kwargs.get('clean')
+        
+        # we process the args in the order of least importance to hopefully stop
+        # any unwanted permanent behavior.
+        
+        if list_sass:
             self.list()
-        elif kwargs.get('clean'):
+        elif clean:
             self.clean()
         else:
             self.process_sass(force=kwargs.get('force_sass'))
 
-         
+    def get_sass_definitions(self):
+        definitions = []
+        for sass_def in getattr(settings, "SASS", ()):
+            try:
+                sd = {
+                    'name' : sass_def['name'],
+                    'input' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['input']),
+                    'output' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['output']),
+                    'media_output' : settings.MEDIA_URL + urlquote(sass_def['details']['output']),
+                }
+                definitions.append(sd)
+            except KeyError:
+                raise SassConfigurationError("Improperly defined SASS definition.")
+        return definitions
+        
+
+    def process_sass(self, force=False):
+        if force:
+            print "Forcing sass to run on all files."
+        sass_definitions = self.get_sass_definitions()
+        for sass_def in sass_definitions:
+            print sass_def
+
+
+    def generate_css_file(self, name, input, output):
+        pass
+
+
     def _remove_file(self, path_to_file):
         try:
             os.remove(path_to_file)
@@ -138,22 +172,6 @@ class Command(BaseCommand):
         sass_struct = SassUtils.build_sass_structure()
         for si in sass_struct:
             self._list_sass(sass_instance=si)
-
-
-    def process_sass(self, force=False):
-        if force:
-            print "\nForcing sass to run on all files.\n"
-        sass_struct = SassUtils.build_sass_structure()
-        for sass_info in sass_struct:
-            try:
-                self.process_sass_file(
-                    sass_info.get('name'),
-                    sass_info.get('input'),
-                    sass_info.get('output'),
-                    force
-                )
-            except SassConfigException, e:
-                sys.stderr.write(self.style.ERROR(e.message))
             
             
     def process_sass_file(self, name, input_file, output_file, force):
