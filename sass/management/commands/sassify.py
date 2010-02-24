@@ -8,7 +8,7 @@ from django.core.management.color  import no_style
 from django.utils.http import urlquote
 
 from sass.models import SassModel
-from sass.utils import SassUtils, updated_needed
+from sass.utils import updated_needed
 from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError, SassGenerationError, SassException
 
 
@@ -34,6 +34,7 @@ class Command(BaseCommand):
     )
     help = 'Converts Sass files into CSS.'
     
+    
     def __init__(self, *args, **kwargs):
         super(Command, self).__init__(*args, **kwargs)
         self.bin = getattr(settings, "SASS_BIN", None)
@@ -58,11 +59,13 @@ class Command(BaseCommand):
         # any unwanted permanent behavior.
         
         if list_sass:
-            self.list()
+            # self.list()
+            pass
         elif clean:
             self.clean()
         else:
             self.process_sass(force=kwargs.get('force_sass'))
+
 
     def get_sass_definitions(self):
         definitions = []
@@ -72,7 +75,7 @@ class Command(BaseCommand):
                     'name' : sass_def['name'],
                     'input_file' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['input']),
                     'output_file' : os.path.join(settings.MEDIA_ROOT, sass_def['details']['output']),
-                    'media_output' : settings.MEDIA_URL + urlquote(sass_def['details']['output']),
+                    # 'media_output' : settings.MEDIA_URL + urlquote(sass_def['details']['output']),
                 }
                 definitions.append(sd)
             except KeyError:
@@ -122,6 +125,7 @@ class Command(BaseCommand):
                 raise SassException(output)
             sass_obj.save()
     
+    
     def clean(self):
         for s in SassModel.objects.all():
             try:
@@ -129,115 +133,59 @@ class Command(BaseCommand):
                 os.remove(s.css_path)
                 s.delete()
             except OSError, e:
-                import pdb; pdb.stack_trace()
-                # no recovery for this - send it back to the user.
                 raise e
-        # sass_struct = SassUtils.build_sass_structure()
-        # for sd in sass_struct:
-        #     print "[%s]" % sd['name']
-        #     msg = self._remove_file(path_to_file=sd['output'])
-        #     print "\t%s" % msg
 
+    
+    # def _list_sass(self, sass_instance):
+    #     print "[%s]" % sass_instance['name']
+    #     # get the digest we have stored and compare to the hash we have on disk.
+    #     try:
+    #         # hash from db.
+    #         sass_obj = SassModel.objects.get(name=sass_instance['name'])
+    #         sass_digest = sass_obj.digest
+    #     except (SassModel.DoesNotExist):
+    #         sass_digest = None
+    #         
+    #     try:
+    #         # digest from disk.
+    #         sass_file_digest = SassUtils.md5_file(sass_instance['input'])
+    #     except SassConfigException, e:
+    #         # not really sure what we want to do with this exception.
+    #         raise e
+    #     
+    #     # check that a CSS file exists - if not, report to the user.
+    #     if not os.path.exists(sass_instance['output']):
+    #         print "\tInput: %s" % sass_instance['input']
+    #         print "\tOutput: %s" % sass_instance['output']
+    #         print "\n\tCSS needs to be generated.\n"
+    #     elif sass_file_digest == sass_digest:
+    #         print "\tInput: %s" % sass_instance['input']
+    #         print "\tOutput: %s" % sass_instance['output']
+    #         
+    #         print "\n\tUp to date.\n"
+    #     else:
+    #         # give out information about the changes.
+    #         print "\tUpdate required\n\t---------------"
+    #         print "\t%s" % sass_instance['input']
+    #         print "\tPrevious: %s" % sass_digest
+    #         print "\tCurrent:  %s" % sass_file_digest
+    
+    
+    # def list(self):
+    #     """
+    #     We check to see if the Sass outlined in the SASS setting are different from what the databse
+    #     has stored. We only care about listing those files that are in the SASS setting. Ignore the 
+    #     settings in the DB if the files have been removed.
+    #     
+    #     Output in the format only if there are differences.:
+    #     
+    #         <name> <old_hash> <current_hash>
+    #         
+    #         If there are no changes, output at the end of the script that there were no changes.
+    #     """
+    #     # process the Sass information in the settings.
+    #     sass_struct = SassUtils.build_sass_structure()
+    #     for si in sass_struct:
+    #         self._list_sass(sass_instance=si)
 
-    def _remove_file(self, path_to_file):
-        try:
-            os.remove(path_to_file)
-            return "Removed %s" % path_to_file
-        except OSError, e:
-            # there is no recovery for these errors - just display to the user.
-            return e.strerror
-
-        
-    def _prepare_dir(self, output_path):
-        if not os.path.exists(output_path):
-            # try to create path
-            try:
-                os.mkdirs(output_path, 0644)
-            except os.error, e:
-                raise SassConfigException(e.message)
-            except AttributeError, e:
-                # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
-                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
-    
-    
-    def _list_sass(self, sass_instance):
-        print "[%s]" % sass_instance['name']
-        # get the digest we have stored and compare to the hash we have on disk.
-        try:
-            # hash from db.
-            sass_obj = SassModel.objects.get(name=sass_instance['name'])
-            sass_digest = sass_obj.digest
-        except (SassModel.DoesNotExist):
-            sass_digest = None
-            
-        try:
-            # digest from disk.
-            sass_file_digest = SassUtils.md5_file(sass_instance['input'])
-        except SassConfigException, e:
-            # not really sure what we want to do with this exception.
-            raise e
-        
-        # check that a CSS file exists - if not, report to the user.
-        if not os.path.exists(sass_instance['output']):
-            print "\tInput: %s" % sass_instance['input']
-            print "\tOutput: %s" % sass_instance['output']
-            print "\n\tCSS needs to be generated.\n"
-        elif sass_file_digest == sass_digest:
-            print "\tInput: %s" % sass_instance['input']
-            print "\tOutput: %s" % sass_instance['output']
-            
-            print "\n\tUp to date.\n"
-        else:
-            # give out information about the changes.
-            print "\tUpdate required\n\t---------------"
-            print "\t%s" % sass_instance['input']
-            print "\tPrevious: %s" % sass_digest
-            print "\tCurrent:  %s" % sass_file_digest
-    
-    
-    def list(self):
-        """
-        We check to see if the Sass outlined in the SASS setting are different from what the databse
-        has stored. We only care about listing those files that are in the SASS setting. Ignore the 
-        settings in the DB if the files have been removed.
-        
-        Output in the format only if there are differences.:
-        
-            <name> <old_hash> <current_hash>
-            
-            If there are no changes, output at the end of the script that there were no changes.
-        """
-        # process the Sass information in the settings.
-        sass_struct = SassUtils.build_sass_structure()
-        for si in sass_struct:
-            self._list_sass(sass_instance=si)
-            
-            
-    def process_sass_file(self, name, input_file, output_file, force):
-        print "[%s]" %name
-        # check that the sass input file actually exists.
-        if not os.path.exists(input_file):
-            raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
-        # make sure the output directory exists.
-        output_path = output_file.rsplit('/', 1)[0]
-        self._prepare_dir(output_path)
-        
-        sass_obj, was_created = SassModel.objects.get_or_create(name=name)
-        input_digest = SassUtils.md5_file(input_file)
-        
-        if not input_digest == sass_obj.digest or not os.path.exists(output_file) or force:
-            sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
-            cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
-            (status, output) = getstatusoutput(cmd)
-            if status:
-                raise SassConfException(output)
-            # if we successfully generate the file, save the model to the DB.    
-            sass_obj.name = name
-            sass_obj.sass_path = input_file
-            sass_obj.css_path = output_file
-            sass_obj.digest = input_digest
-            sass_obj.save()
-            print "\tGenerated new CSS file: %s" %sass_obj.css_path
-        else:
-            print "\tAlready up to date."
         

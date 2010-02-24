@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.http import urlquote
 
 
 class SassModel(models.Model):
@@ -16,8 +17,8 @@ class SassModel(models.Model):
         return self.css_path.split(settings.MEDIA_ROOT)[1].lstrip('/')
         
     def css_media_path(self):
-        # return SassUtils.get_media_url(path=self.relative_css_path())
-        return
+        return settings.MEDIA_URL + urlquote(self.relative_css_path())
         
+
 from sass import listeners
 listeners.start_listening()
