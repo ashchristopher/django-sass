@@ -8,7 +8,7 @@ from django.core.management.color  import no_style
 from django.utils.http import urlquote
 
 from sass.models import SassModel
-from sass.utils import updated_needed
+from sass.utils import update_needed
 from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError, SassGenerationError, SassException
 
 
@@ -94,7 +94,7 @@ class Command(BaseCommand):
     def generate_css_file(self, force, name, input_file, output_file, **kwargs):
         # check that the sass input file actually exists.
         if not os.path.exists(input_file):
-            raise SassConfigException('The input path \'%s\' seems to be invalid.\n' %input_file)
+            raise SassConfigException('The input \'%s\' does not exist.\n' %input_file)
         output_path = output_file.rsplit('/', 1)[0]
         if not os.path.exists(output_path):
             # try to create path
@@ -116,7 +116,7 @@ class Command(BaseCommand):
         sass_obj.sass_path = input_file 
         sass_obj.css_path = output_file
         
-        needs_update = was_created or force or updated_needed(sass_obj)
+        needs_update = was_created or force or update_needed(sass_obj)
         if needs_update:
             sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict

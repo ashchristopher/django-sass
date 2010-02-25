@@ -7,14 +7,29 @@ from django.utils.http import urlquote
 from sass.models import SassModel
 from sass.exceptions import SassConfigException
 
-def updated_needed(new_sass_model):
+def update_needed(new_sass_model):
     # check the database and see if the 
     name = new_sass_model.name
     orig_sass_model = SassModel.objects.get(name=name)
     
-    # if the model has been modified, then we need to update.
-    if not orig_sass_model.__dict__ == new_sass_model.__dict__:
+    # if the output file doesn't exist we need to update
+    if not os.path.exists(new_sass_model.css_path):
         return True
+    
+    # if the model has been modified, then we need to update.
+    for key in ['sass_path', 'css_path', 'style',]:
+        if not getattr(orig_sass_model, key)  == getattr(new_sass_model, key):
+            return True
+    
+    # if the source file has been updated, then we need to update.
+    try:
+        last_modified_time = os.stat(new_sass_model.sass_path)[8]
+        if not unicode(last_modified_time) == new_sass_model.source_modified_time:
+            return True
+    except OSError:
+        # file does not exist so we need to update
+        return True
+        
     return False
 
 
