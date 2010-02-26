@@ -59,8 +59,7 @@ class Command(BaseCommand):
         # any unwanted permanent behavior.
         
         if list_sass:
-            # self.list()
-            pass
+            self.list()
         elif clean:
             self.clean()
         else:
@@ -134,58 +133,33 @@ class Command(BaseCommand):
                 s.delete()
             except OSError, e:
                 raise e
-
-    
-    # def _list_sass(self, sass_instance):
-    #     print "[%s]" % sass_instance['name']
-    #     # get the digest we have stored and compare to the hash we have on disk.
-    #     try:
-    #         # hash from db.
-    #         sass_obj = SassModel.objects.get(name=sass_instance['name'])
-    #         sass_digest = sass_obj.digest
-    #     except (SassModel.DoesNotExist):
-    #         sass_digest = None
-    #         
-    #     try:
-    #         # digest from disk.
-    #         sass_file_digest = SassUtils.md5_file(sass_instance['input'])
-    #     except SassConfigException, e:
-    #         # not really sure what we want to do with this exception.
-    #         raise e
-    #     
-    #     # check that a CSS file exists - if not, report to the user.
-    #     if not os.path.exists(sass_instance['output']):
-    #         print "\tInput: %s" % sass_instance['input']
-    #         print "\tOutput: %s" % sass_instance['output']
-    #         print "\n\tCSS needs to be generated.\n"
-    #     elif sass_file_digest == sass_digest:
-    #         print "\tInput: %s" % sass_instance['input']
-    #         print "\tOutput: %s" % sass_instance['output']
-    #         
-    #         print "\n\tUp to date.\n"
-    #     else:
-    #         # give out information about the changes.
-    #         print "\tUpdate required\n\t---------------"
-    #         print "\t%s" % sass_instance['input']
-    #         print "\tPrevious: %s" % sass_digest
-    #         print "\tCurrent:  %s" % sass_file_digest
     
     
-    # def list(self):
-    #     """
-    #     We check to see if the Sass outlined in the SASS setting are different from what the databse
-    #     has stored. We only care about listing those files that are in the SASS setting. Ignore the 
-    #     settings in the DB if the files have been removed.
-    #     
-    #     Output in the format only if there are differences.:
-    #     
-    #         <name> <old_hash> <current_hash>
-    #         
-    #         If there are no changes, output at the end of the script that there were no changes.
-    #     """
-    #     # process the Sass information in the settings.
-    #     sass_struct = SassUtils.build_sass_structure()
-    #     for si in sass_struct:
-    #         self._list_sass(sass_instance=si)
-
+    def list(self):
+        """
+        We check to see if the Sass outlined in the SASS setting are different from what the databse
+        has stored. We only care about listing those files that are in the SASS setting. Ignore the 
+        settings in the DB if the files have been removed.
+        
+        Output in the format only if there are differences.:
+        
+            <name> <old_hash> <current_hash>
+            
+            If there are no changes, output at the end of the script that there were no changes.
+        """
+        # process the Sass information in the settings.
+        sass_definitions = self.get_sass_definitions()
+        for sass_def in sass_definitions:
+            print "[%s]" % sass_def['name']
+            try:
+                sass_obj = SassModel.objects.get(name=sass_def['name'])
+                sass_obj.sass_path = sass_def['input_file']
+                sass_obj.css_path = sass_def['output_file']
+                was_created = False
+            except SassModel.DoesNotExist:
+                sass_obj = SassModel(name=sass_def['name'])
+                was_created = True
+            needs_update = was_created or update_needed(sass_obj)
+            if needs_update:
+                print "\tChanges detected."
         
