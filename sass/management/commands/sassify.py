@@ -139,13 +139,7 @@ class Command(BaseCommand):
         """
         We check to see if the Sass outlined in the SASS setting are different from what the databse
         has stored. We only care about listing those files that are in the SASS setting. Ignore the 
-        settings in the DB if the files have been removed.
-        
-        Output in the format only if there are differences.:
-        
-            <name> <old_hash> <current_hash>
-            
-            If there are no changes, output at the end of the script that there were no changes.
+        settings in the DB if the files/settings have been removed.
         """
         # process the Sass information in the settings.
         sass_definitions = self.get_sass_definitions()
