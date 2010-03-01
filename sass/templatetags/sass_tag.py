@@ -14,6 +14,10 @@ class SassNode(template.Node):
     def __init__(self, name):
         try:
             self.model = SassModel.objects.get(name=name)
+            # check to see if we need to run the source through sass.
+            
+            
+            
         except SassModel.DoesNotExist, e:
             raise template.TemplateSyntaxError('Sass name "%s" does not exist.' % self.name)
         
@@ -21,7 +25,7 @@ class SassNode(template.Node):
     def render(self, context):
         relative_css_path = self.model.relative_css_path()
         media_url = self.model.css_media_path()
-        css = "<link href='%s?%s' rel='stylesheet' type='text/css' />" %(media_url, self.model.digest)
+        css = "<link href='%s?%s' rel='stylesheet' type='text/css' />" %(media_url, self.model.source_modified_time)
         return css
 
 
