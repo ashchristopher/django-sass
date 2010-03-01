@@ -14,10 +14,6 @@ class SassNode(template.Node):
     def __init__(self, name):
         try:
             self.model = SassModel.objects.get(name=name)
-            # check to see if we need to run the source through sass.
-            
-            
-            
         except SassModel.DoesNotExist, e:
             raise template.TemplateSyntaxError('Sass name "%s" does not exist.' % self.name)
         
