@@ -43,6 +43,8 @@ class Command(BaseCommand):
         # test that the binary actually exists.
         if not os.path.exists(self.bin):
             raise SassConfigurationError('Sass binary defined by SASS_BIN does not exist: %s' % self.bin)
+            
+        self.sass_style = getattr(settings, "SASS_STYLE", 'nested')
     
     
     def handle(self, *args, **kwargs):
@@ -82,12 +84,14 @@ class Command(BaseCommand):
         return definitions
         
 
-    def process_sass(self, force=False):
+    def process_sass(self, name=None, force=False):
         if force:
             print "Forcing sass to run on all files."
         sass_definitions = self.get_sass_definitions()
         for sass_def in sass_definitions:
-            self.generate_css_file(force=force, **sass_def)
+            if not name or name == sass_def['name']:
+                self.generate_css_file(force=force, **sass_def)
+            
 
 
     def generate_css_file(self, force, name, input_file, output_file, **kwargs):

@@ -7,12 +7,16 @@ from django.utils.http import urlquote
 from sass.utils import SassUtils
 from sass.models import SassModel
 
+from sass.management.commands import sassify
+
 
 register = template.Library()
 
 class SassNode(template.Node):
     def __init__(self, name):
         try:
+            command = sassify.Command()
+            command.process_sass(name=name)
             self.model = SassModel.objects.get(name=name)
         except SassModel.DoesNotExist, e:
             raise template.TemplateSyntaxError('Sass name "%s" does not exist.' % self.name)
