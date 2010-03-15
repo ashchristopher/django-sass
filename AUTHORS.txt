@@ -1,0 +1,5 @@
+Developers:
+Ash Christopher <ash@newthink.net>
+ 
+Contributors:
+Shawn Burant <shawn@gap.ca> (Namespace clobbering bug.)
