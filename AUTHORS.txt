@@ -2,4 +2,4 @@ Developers:
 Ash Christopher <ash@newthink.net>
  
 Contributors:
-Shawn Burant <shawn@gap.ca> (Namespace clobbering bug.)
+Shawn Burant <shawn.burant@gmail.com> (Namespace clobbering bug.)
