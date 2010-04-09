@@ -1,31 +1,19 @@
-import os
-from distutils.core import setup
-# from setuptools import setup, find_packages
+from distribute_setup import use_setuptools; use_setuptools()
+from setuptools import setup, find_packages
 
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
-
 setup(
     name='django-sass',
     version='0.1.0',
+    packages = find_packages(),
     author='Ash Christopher',
     author_email='ash@newthink.net',
-    description='Sass library for django.',
-    packages=['sass', ],
-    scripts=[],
-    url='http://github.com/ashchristopher/django-sass',
+    description='Django library that integrates Sass into your project.',
     license='LICENSE.txt',
-    keywords = "example documentation tutorial",
+    url='http://github.com/ashchristopher/django-sass',
+    keywords='django sass ',
     long_description=read('README'),
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Topic :: Utilities",
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python",
-        "Operating System :: Linux, BSD, OSX",
-        "Natural Language :: English",
-        "Topic :: Utilities",
-        "Topic :: Django",
-    ],
+    
 )
