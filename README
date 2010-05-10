@@ -6,3 +6,70 @@ Django-sass integrates the power, usefulness and best of
 all DRY-ness of Sass, into your Django projects.
 
 
+Getting Started
+-------------------------------
+
+In your settings.py, define the path to your sass executable.
+
+SASS_BIN = '/usr/bin/sass' # location of the sass binary
+
+As well, you will need a dictionary to define the sass input and output files.
+
+SASS = (
+    { 
+        'name' : 'test', 
+        'details' : { 
+            'input' : 'sass/test.sass', 
+            'output' : 'css/test.css',
+        }
+    },
+    { 
+        'name' : 'test2', 
+        'details' : { 
+            'input' : 'sass/test2.sass', 
+            'output' : 'css/test2.css', 
+        }
+    },
+)
+
+Once all of your Sass files have been defined in your settings.py file, you can now reference 
+them in your templates.
+
+{% load sass_tag %}
+...
+{% sass <name of sass in settings> %}
+
+eg.
+
+{% sass 'test' %}
+
+If the named sass entry is not up to date, django-sass will automatically run the sass command on
+the sass file, generating your css.
+
+
+Management Command
+-------------------------------
+The 'sassify' command is used to generate the css manually. The css will only be generated if 
+there are changes made to the sass files.
+
+python manage.py sassify [OPTIONS]
+    -- This command runs sass on all files that are not yet up to date.
+
+
+Options:
+
+'--force'
+    - Forces sass to regenerate all css files from css files.
+
+'--list'
+    - List the status of your named sass entries.
+    
+'--clean'
+    - Remove all generated files.
+    
+    
+    
+Compatability
+-------------------------------
+This library is only compatible with Linux/BSD based distros. I don't use Windows, so if you want 
+Windows support, feel free to submit a patch.
