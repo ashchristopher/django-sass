@@ -1,15 +1,14 @@
-import sys, os
+import os
 from optparse import make_option
 from commands import getstatusoutput
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from django.core.management.color  import no_style
-from django.utils.http import urlquote
 
 from sass.models import SASS_ROOT, SassModel
 from sass.utils import update_needed
-from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError, SassGenerationError, SassException
+from sass.exceptions import SassConfigException, SassConfigurationError, SassCommandArgumentError, SassException
 
 
 class Command(BaseCommand):
@@ -65,7 +64,7 @@ class Command(BaseCommand):
         elif clean:
             self.clean()
         else:
-            self.process_sass(force=kwargs.get('force_sass'))
+            self.process_sass(force=force)
 
 
     def get_sass_definitions(self):
