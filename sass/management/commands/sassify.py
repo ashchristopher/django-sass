@@ -1,6 +1,6 @@
 import os
+import subprocess
 from optparse import make_option
-from commands import getstatusoutput
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -122,9 +122,10 @@ class Command(BaseCommand):
         if needs_update:
             sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
-            (status, output) = getstatusoutput(cmd)
-            if not status == 0:
-                raise SassException(output)
+            p = subprocess.Popen([self.bin, "-t", self.sass_style, "--no-cache", input_file, output_file])
+            stdout, stderr = p.communicate()
+            if p.returncode != 0: # Process failed (nonzero exit code)
+                raise SassException(stderr)
             sass_obj.save()
 
 
