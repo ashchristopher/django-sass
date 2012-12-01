@@ -18,7 +18,7 @@ def update_needed(new_sass_model):
 
     # if the model has been modified, then we need to update.
     for key in ['sass_path', 'css_path', 'style',]:
-        if not getattr(orig_sass_model, key)  == getattr(new_sass_model, key):
+        if not getattr(orig_sass_model, key) == getattr(new_sass_model, key):
             return True
 
     # if the source file has been updated, then we need to update.
@@ -34,18 +34,15 @@ def update_needed(new_sass_model):
 
 
 class SassUtils(object):
-
     @staticmethod
     def get_file_path(path):
         if os.path.isabs(path):
             return path
         return settings.MEDIA_ROOT + os.path.sep + path
 
-
     @staticmethod
     def get_media_url(path, media_url=settings.MEDIA_URL):
         return media_url + urlquote(path)
-
 
     @staticmethod
     def build_sass_structure():
@@ -76,7 +73,6 @@ class SassUtils(object):
             })
         return sass_struct
 
-
     @staticmethod
     def md5_file(filename):
         try:
@@ -87,5 +83,5 @@ class SassUtils(object):
             for line in content:
                 md5.update(line)
             return md5.hexdigest()
-        except IOError, e:
+        except IOError as e:
             raise SassConfigException(e.message)
