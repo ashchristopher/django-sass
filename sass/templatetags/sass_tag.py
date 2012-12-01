@@ -27,7 +27,7 @@ def do_sass(parser, token):
         # get the tag and the sass resource.
         tag_name, resource = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, '%s tag requires a single argument.' %token.contents.split()[0]
+        raise template.TemplateSyntaxError('%s tag requires a single argument.' %token.contents.split()[0])
     if not (resource[0] == resource[-1] and resource[0] in ('"', "'")):
-        raise template.TemplateSyntaxError, "%r tag's argument should be in quotes" % tag_name
+        raise template.TemplateSyntaxError("%r tag's argument should be in quotes" % tag_name)
     return SassNode(resource[1:-1])
