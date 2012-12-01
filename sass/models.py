@@ -17,7 +17,6 @@ class SassModel(models.Model):
         return self.name
 
     def relative_css_path(self):
-        print self.css_path.split(SASS_ROOT)[1].lstrip('/')
         return self.css_path.split(SASS_ROOT)[1].lstrip('/')
 
     def css_media_path(self):
