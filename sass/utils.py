@@ -24,7 +24,7 @@ def update_needed(new_sass_model):
     # if the source file has been updated, then we need to update.
     try:
         last_modified_time = os.stat(new_sass_model.sass_path)[8]
-        if not unicode(last_modified_time) == new_sass_model.source_modified_time:
+        if not str(last_modified_time) == new_sass_model.source_modified_time:
             return True
     except OSError:
         # file does not exist so we need to update
