@@ -2,4 +2,5 @@ Developers:
 Ash Christopher <ash@newthink.net>
  
 Contributors:
+Jerome Leclanche <jerome.leclanche+sass@gmail.com> (Python 3 support)
 Shawn Burant <shawn.burant@gmail.com> (Namespace clobbering bug.)

@@ -1,10 +1,10 @@
 import os
+import subprocess
 from optparse import make_option
-from commands import getstatusoutput
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from django.core.management.color  import no_style
+from django.core.management.color import no_style
 
 from sass.models import SASS_ROOT, SassModel
 from sass.utils import update_needed
@@ -85,7 +85,7 @@ class Command(BaseCommand):
 
     def process_sass(self, name=None, force=False):
         if force:
-            print "Forcing sass to run on all files."
+            print("Forcing sass to run on all files.")
         sass_definitions = self.get_sass_definitions()
         for sass_def in sass_definitions:
             if not name or name == sass_def['name']:
@@ -101,12 +101,12 @@ class Command(BaseCommand):
         if not os.path.exists(output_path):
             # try to create path
             try:
-                os.mkdirs(output_path, 0644)
-            except os.error, e:
+                os.mkdirs(output_path, 0o644)
+            except os.error as e:
                 raise SassConfigException(e.message)
-            except AttributeError, e:
+            except AttributeError as e:
                 # we have an older version of python that doesn't support os.mkdirs - fail gracefully.
-                raise SassConfigException('Output path does not exist - please create manually: %s\n' %output_path)
+                raise SassConfigException("Output path does not exist - please create manually: %s\n" % output_path)
 
         try:
             sass_obj = SassModel.objects.get(name=name)
@@ -122,19 +122,20 @@ class Command(BaseCommand):
         if needs_update:
             sass_dict = { 'bin' : self.bin, 'sass_style' : self.sass_style, 'input' : input_file, 'output' : output_file }
             cmd = "%(bin)s -t %(sass_style)s -C %(input)s > %(output)s" %sass_dict
-            (status, output) = getstatusoutput(cmd)
-            if not status == 0:
-                raise SassException(output)
+            p = subprocess.Popen([self.bin, "-t", self.sass_style, "--no-cache", input_file, output_file])
+            stdout, stderr = p.communicate()
+            if p.returncode != 0: # Process failed (nonzero exit code)
+                raise SassException(stderr)
             sass_obj.save()
 
 
     def clean(self):
         for s in SassModel.objects.all():
             try:
-                print "Removing css: %s" % s.css_path
+                print("Removing css: %s" % s.css_path)
                 os.remove(s.css_path)
                 s.delete()
-            except OSError, e:
+            except OSError as e:
                 raise e
 
 
@@ -147,7 +148,7 @@ class Command(BaseCommand):
         # process the Sass information in the settings.
         sass_definitions = self.get_sass_definitions()
         for sass_def in sass_definitions:
-            print "[%s]" % sass_def['name']
+            print("[%s]" % sass_def["name"])
             try:
                 sass_obj = SassModel.objects.get(name=sass_def['name'])
                 sass_obj.sass_path = sass_def['input_file']
@@ -158,4 +159,4 @@ class Command(BaseCommand):
                 was_created = True
             needs_update = was_created or update_needed(sass_obj)
             if needs_update:
-                print "\tChanges detected."
+                print("\tChanges detected.")
